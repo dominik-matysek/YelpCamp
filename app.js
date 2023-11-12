@@ -1,5 +1,4 @@
-// Main file - NEED TO BE FIXED AS THE PAGE DOES NOT LOAD
-// CHECK THE OG FILE FROM COLT'S GITHUB AND FIX IT
+// Main file
 if(process.env.NODE_ENV !== "production") {
     require('dotenv').config();
 }
@@ -17,6 +16,7 @@ const passport = require('passport');
 const LocalStrategy = require('passport-local');
 const mongoSanitize = require('express-mongo-sanitize');
 const helmet = require('helmet');
+const MongoStore = require('connect-mongo');
 
 const User = require('./models/user.js');
 
@@ -26,11 +26,21 @@ const userRoutes = require('./routes/users');
 const campgroundsRoutes = require('./routes/campgrounds');
 const reviewsRoutes = require('./routes/reviews');
 
+const dbUrl = process.env.DB_URL;
+
 //te parametry usenew itp chyba niepotrzebne w ogole
+
+// Local mongo db
 mongoose.connect('mongodb://127.0.0.1:27017/yelp-camp', {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 });
+
+// Cloud mongo db
+// mongoose.connect(dbUrl, {
+//     useNewUrlParser: true,
+//     useUnifiedTopology: true,
+// });
 
 const db = mongoose.connection;
 db.on("error", console.error.bind(console, "connection error:"));
@@ -47,10 +57,23 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.urlencoded({ extended: true }));
 app.use(methodOverride('_method'));
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(mongoSanitize);
+app.use(mongoSanitize()); // don't forget about ()
 
-const sessionConfig ={
-    name: 'blah',
+const store = MongoStore.create({
+    mongoUrl: 'mongodb://127.0.0.1:27017/yelp-camp',
+    touchAfter: 24 * 60 * 60,
+    crypto: {
+        secret: 'thisshouldbeabettersecret!'
+    }
+});
+
+store.on("error", function (e) {
+    console.log('SESSION STORE ERROR', e);
+});
+
+const sessionConfig = {
+    store,
+    name: 'session',
     secret: 'thisshouldbeabettersecret!',
     resave: false,
     saveUninitialized: true,
@@ -80,6 +103,7 @@ const styleSrcUrls = [
     "https://api.tiles.mapbox.com/",
     "https://fonts.googleapis.com/",
     "https://use.fontawesome.com/",
+    "https://cdn.jsdelivr.net" // has to be included, otherwise bootstrap does not work
 ];
 const connectSrcUrls = [
     "https://api.mapbox.com/",
@@ -131,7 +155,7 @@ app.use('/campgrounds/:id/reviews', reviewsRoutes);
 
 app.get('/', (req, res) => {
     res.render('home');
-})
+});
 
 // every request, every path (all, *)
 app.all('*', (req, res, next) => {
