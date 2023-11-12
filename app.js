@@ -56,6 +56,7 @@ const sessionConfig ={
 }
 app.use(session(sessionConfig));
 app.use(flash());
+// what is helmet?
 
 // app.use(session) must be before app.use(passport)
 app.use(passport.initialize());
@@ -70,12 +71,6 @@ app.use((req, res, next) => {
     res.locals.success = req.flash('success');
     res.locals.error = req.flash('error');
     next();
-})
-
-app.get('/fakeUser', async(req, res) => {
-    const user = new User({email: 'coltttt@gmail.com', username: 'coltttt'});
-    const newUser = await User.register(user, 'chicken');
-    res.send(newUser);
 })
 
 app.use('/', userRoutes);
